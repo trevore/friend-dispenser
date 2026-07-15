@@ -172,11 +172,6 @@ stty -f /dev/cu.usbserial-XXXX 115200 raw
   trailing `delay: 5s`. Any press during that window is dropped (logs
   `Script 'unlock_door' is already running!`). Net effect: **max one unlock per 5s**.
   Change the `delay:` to retune.
-- **Button chatter (open item):** during testing the button fired continuously while held.
-  If GPIO4 is floating/bouncing rather than a clean press, the door would unlock every 5s
-  for as long as the fault persists. Verify the physical wiring (button → GPIO4 → GND);
-  `INPUT_PULLUP` should keep it clean. Consider a `delayed_off` filter or an `on_release`
-  guard if chatter continues.
 - **TLS:** `verify_ssl: false` because the NVR uses a self-signed cert. The `esp-idf`
   framework (not Arduino) is used deliberately — it handles the HTTPS/TLS heap better.
 - **Security:** native API is encrypted (`api_key`) and OTA is password-protected
