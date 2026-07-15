@@ -1,0 +1,31 @@
+# DEPLOYMENT CONFIG TEMPLATE — copy to config.yaml and fill in real values:
+#   cp config.yaml.example config.yaml
+# config.yaml is gitignored and must never be committed.
+# Consumed by friend-dispenser.yaml via `substitutions: !include config.yaml`.
+
+# --- Wi-Fi ---
+wifi_ssid: "YOUR_WIFI_SSID"
+wifi_password: "YOUR_WIFI_PASSWORD"
+
+# --- Static IP for the button on your LAN ---
+static_ip: "192.168.1.50"
+gateway: "192.168.1.1"
+subnet: "255.255.255.0"
+
+# --- UniFi Access controller / door ---
+nvr_ip: "192.168.20.10"          # IP of the console running the Access app
+nvr_port: "12445"               # Access developer API port (default 12445)
+door_uuid: "YOUR_DOOR_UUID"     # from: GET https://<nvr_ip>:12445/api/v1/developer/doors
+
+# Full Authorization header for the unlock endpoint. Format: "Bearer <token>".
+# The token MUST be write-capable. Mint it from an Owner / Full-Management admin:
+#   UniFi Access -> Admins & Users -> (your account) -> Create API Token
+# Tokens from the Integrations or General-Access pages are READ-ONLY and return
+# 401 CODE_UNAUTHORIZED on unlock (they can still GET /doors, which hides the problem).
+unlock_auth: "Bearer YOUR_WRITE_CAPABLE_ACCESS_TOKEN"
+
+# --- Device security ---
+# ESPHome native-API encryption key (base64, 32 bytes):  openssl rand -base64 32
+api_key: "GENERATE_WITH_openssl_rand_-base64_32"
+# OTA update password:  openssl rand -hex 16
+ota_password: "GENERATE_WITH_openssl_rand_-hex_16"

@@ -1,0 +1,89 @@
+# Generic firmware logic — no deployment-specific values live here.
+# All site config + secrets come from config.yaml (gitignored; see config.yaml.example).
+substitutions: !include config.yaml
+
+esphome:
+  name: friend-dispenser
+  friendly_name: "Friend Dispenser"
+
+esp32:
+  board: esp32dev
+  framework:
+    type: esp-idf # Handles the heavy HTTPS payload smoothly without memory strain
+
+# Network connectivity setup with hardcoded static IP
+wifi:
+  ssid: "${wifi_ssid}"
+  password: "${wifi_password}"
+
+  # Explicit static network routing
+  manual_ip:
+    static_ip: "${static_ip}"
+    gateway: "${gateway}"
+    subnet: "${subnet}"
+
+# The local standalone dashboard page hosted right on the ESP32 chip
+web_server:
+  port: 80
+
+logger:
+
+# Firmware build marker — readable over WiFi at http://<static_ip>/text_sensor/firmware_build
+# Used to prove an OTA update actually landed (value changes each flash).
+text_sensor:
+  - platform: template
+    name: "Firmware Build"
+    id: firmware_build
+    lambda: |-
+      return {"ota-over-wifi-2026-07-14"};
+    update_interval: 60s
+
+# API secured with an encryption key (nobody on the LAN can drive the device)
+api:
+  encryption:
+    key: "${api_key}"
+
+# OTA updates password-protected (nobody on the LAN can reflash it)
+ota:
+  - platform: esphome
+    password: "${ota_password}"
+
+# Configures the network client settings for outgoing calls
+http_request:
+  useragent: esphome/unifi-client
+  timeout: 5s
+  # Bypasses local self-signed SSL verification on the NVR controller
+  verify_ssl: false
+
+# Monitors the physical wiring of your desk button
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO4
+      mode: INPUT_PULLUP # Pulls pin to 3.3V so it defaults to "off"
+      inverted: true     # Pressing the button grounds the circuit, firing the trigger
+    name: "Desk Door Button"
+
+    # Software filter to ensure solid contacts and zero ghost clicks
+    filters:
+      - delayed_on: 20ms
+
+    # The action that runs the instant the button is pushed down
+    on_press:
+      then:
+        - script.execute: unlock_door
+
+# Unlock action, rate-limited to once per 5s.
+# mode: single -> any press during the trailing 5s delay is dropped (one unlock / 5s).
+script:
+  - id: unlock_door
+    mode: single
+    then:
+      - http_request.send:
+          # UniFi Access remote-unlock is a PUT, not POST (POST 404s — no such route)
+          method: PUT
+          url: "https://${nvr_ip}:${nvr_port}/api/v1/developer/doors/${door_uuid}/unlock"
+          request_headers:
+            Authorization: "${unlock_auth}"
+            Content-Type: "application/json"
+      - delay: 5s   # cooldown: further presses ignored until this elapses

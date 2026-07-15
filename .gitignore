@@ -1,0 +1,6 @@
+# Local deployment config with real credentials — never commit
+config.yaml
+
+# ESPHome build artifacts
+.esphome/
+*.bin
